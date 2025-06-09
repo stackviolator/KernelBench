@@ -354,6 +354,14 @@ def eval_kernel_against_ref(
         os.environ["TORCH_USE_CUDA_DSA"] = "1"  # compile with device side assertion
         # add hash for later to distinguish between multi-turn kernels
         ModelNew = load_custom_model(custom_model_src, context, build_dir)
+        
+        # Check if compilation failed (load_custom_model returns None on failure)
+        if ModelNew is None:
+            print("Failed to compile custom CUDA kernel: load_custom_model returned None")
+            metadata["compilation_error"] = "load_custom_model returned None - compilation failed"
+            graceful_eval_cleanup(context, device)
+            return KernelExecResult(compiled=False, metadata=metadata)
+        
         torch.cuda.synchronize(device=device)  # not sure if this is too much
     except Exception as e:
         print(
