@@ -318,6 +318,11 @@ def eval_kernel_against_ref(
         linewidth=80,  # Maximum width before wrapping
     )
 
+    # If no build directory provided, create a unique temporary one to avoid ninja lockfile clashes
+    if build_dir is None:
+        import tempfile
+        build_dir = tempfile.mkdtemp(prefix="kernelbench_build_")
+
     # set CUDA device
     torch.cuda.set_device(device)
 
@@ -369,7 +374,8 @@ def eval_kernel_against_ref(
         )
         # TODO: add metadata for compilation error (how to we get the compilation error message?)
 
-        if "lock" in str(e) or "No such file or directory" in str(e):
+        # Treat only genuine lockfile contention as retryable; missing .so means compilation failed
+        if "lock" in str(e):
             # this is a lock file error, likely due to concurrent compilation
             # this does not necessarily mean the compilation failed, but we should retry
             print(
